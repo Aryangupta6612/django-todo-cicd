@@ -3,30 +3,26 @@ pipeline {
 
     environment {
         VENV_NAME = 'venv'
+        DOCKER_COMPOSE_VERSION = 'v2.23.0'
     }
 
     stages {
-        stage('Install Dependencies') {
+        stage('Install Docker Compose') {
             steps {
                 sh '''
-                    # Install Docker if not present
-                    if ! command -v docker >/dev/null 2>&1; then
-                        echo "Installing Docker..."
-                        curl -fsSL https://get.docker.com -o get-docker.sh
-                        sh get-docker.sh
-                        sudo usermod -aG docker $USER
-                    else
-                        echo "Docker is already installed."
-                    fi
-                    
-                    # Install Docker Compose if not present
-                    if ! command -v docker-compose >/dev/null 2>&1; then
+                    # Install Docker Compose as Docker CLI plugin (no sudo needed)
+                    if ! docker compose version >/dev/null 2>&1; then
                         echo "Installing Docker Compose..."
-                        sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-                        sudo chmod +x /usr/local/bin/docker-compose
+                        mkdir -p ~/.docker/cli-plugins/
+                        curl -SL "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" \
+                            -o ~/.docker/cli-plugins/docker-compose
+                        chmod +x ~/.docker/cli-plugins/docker-compose
                     else
                         echo "Docker Compose is already installed."
                     fi
+                    
+                    # Verify installation
+                    docker compose version || exit 1
                 '''
             }
         }
@@ -45,40 +41,33 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                // Using direct docker command instead of docker-compose
                 sh 'docker run --rm todo-app-cicd python manage.py test'
-                
-                // Alternative if you want to use docker-compose later:
-                // sh 'docker-compose -f docker-compose.test.yml up --abort-on-container-exit'
             }
         }
 
         stage('Deploy') {
             steps {
-                // First stop any existing containers
-                sh 'docker-compose down || true'
-                
-                // Then start new containers
-                sh 'docker-compose up -d --build'
-                
-                // Health check
-                sh 'sleep 10 && curl --fail http://localhost:8000 || exit 1'
+                sh '''
+                    docker compose down || true
+                    docker compose up -d --build
+                    echo "Waiting for application to start..."
+                    sleep 15
+                    curl --fail http://localhost:8000 || exit 1
+                '''
             }
         }
     }
 
     post {
         always {
-            // Clean up stopped containers
             sh 'docker container prune -f || true'
+            sh 'docker image prune -f || true'
         }
         success {
             echo '✅ Build and deployment successful!'
-            // Optional: Add notification here
         }
         failure {
             echo '❌ Build failed. Please check the logs!'
-            // Optional: Add failure notification here
         }
     }
 }
