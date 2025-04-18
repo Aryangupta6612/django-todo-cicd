@@ -2,7 +2,7 @@
 A simple todo app built with django yes hey
 # hi my name is Aryan
 # my name is Aryan Gupta
-hey aryan
+hey
 ![todo App](https://raw.githubusercontent.com/shreys7/django-todo/develop/staticfiles/todoApp.png)
 ### Setup
 To get this repository, run the following command inside your git enabled terminal
