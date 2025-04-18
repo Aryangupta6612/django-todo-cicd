@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+
+    environment {
+        VENV_NAME = 'venv'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Aryangupta6612/django-todo-cicd.git', branch: 'develop'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t todo-app-cicd .'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh 'docker-compose run --rm web python manage.py test'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh 'docker-compose up -d'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build and deployment successful!'
+        }
+        failure {
+            echo 'Build failed. Please check the logs!'
+        }
+    }
+}
