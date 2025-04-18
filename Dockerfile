@@ -1,27 +1,32 @@
-# Use Python 3 base image
-FROM python:3
+# Python 3.9 use karo (stable + distutils included)
+FROM python:3.9
 
-# Set the working directory in the container
-WORKDIR /data
+# System optimizations
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-# Update apt-get repositories and install required dependencies
+# Working directory set karo
+WORKDIR /app
+
+# System dependencies install karo
 RUN apt-get update && apt-get install -y \
-    python3-distutils \
+    python3-dev \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install specific version of Django and other dependencies
+# Python dependencies install karo
+COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install django==3.2
+    pip install -r requirements.txt
 
-# Copy the current directory contents into the container at /data
+# Project copy karo
 COPY . .
 
-# Run database migrations
+# DB migrations run karo
 RUN python manage.py migrate
 
-# Expose port 8000
+# Port expose karo (8000)
 EXPOSE 8000
 
-# Command to run the application
+# Django server start karo
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
