@@ -6,6 +6,20 @@ pipeline {
     }
 
     stages {
+        stage('Install Docker (if needed)') {
+            steps {
+                sh '''
+                    if ! command -v docker >/dev/null 2>&1; then
+                      echo "Docker not found. Installing..."
+                      curl -fsSL https://get.docker.com -o get-docker.sh
+                      sh get-docker.sh
+                    else
+                      echo "Docker is already installed."
+                    fi
+                '''
+            }
+        }
+
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/Aryangupta6612/django-todo-cicd.git', branch: 'develop'
@@ -33,10 +47,10 @@ pipeline {
 
     post {
         success {
-            echo 'Build and deployment successful!'
+            echo '✅ Build and deployment successful!'
         }
         failure {
-            echo 'Build failed. Please check the logs!'
+            echo '❌ Build failed. Please check the logs!'
         }
     }
 }
