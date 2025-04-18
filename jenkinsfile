@@ -6,21 +6,32 @@ pipeline {
     }
 
     stages {
-        stage('Install Docker (if needed)') {
+        stage('Install Dependencies') {
             steps {
                 sh '''
+                    # Install Docker if not present
                     if ! command -v docker >/dev/null 2>&1; then
-                      echo "Docker not found. Installing..."
-                      curl -fsSL https://get.docker.com -o get-docker.sh
-                      sh get-docker.sh
+                        echo "Installing Docker..."
+                        curl -fsSL https://get.docker.com -o get-docker.sh
+                        sh get-docker.sh
+                        sudo usermod -aG docker $USER
                     else
-                      echo "Docker is already installed."
+                        echo "Docker is already installed."
+                    fi
+                    
+                    # Install Docker Compose if not present
+                    if ! command -v docker-compose >/dev/null 2>&1; then
+                        echo "Installing Docker Compose..."
+                        sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                        sudo chmod +x /usr/local/bin/docker-compose
+                    else
+                        echo "Docker Compose is already installed."
                     fi
                 '''
             }
         }
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
                 git url: 'https://github.com/Aryangupta6612/django-todo-cicd.git', branch: 'develop'
             }
@@ -34,23 +45,40 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh 'docker-compose run --rm web python manage.py test'
+                // Using direct docker command instead of docker-compose
+                sh 'docker run --rm todo-app-cicd python manage.py test'
+                
+                // Alternative if you want to use docker-compose later:
+                // sh 'docker-compose -f docker-compose.test.yml up --abort-on-container-exit'
             }
         }
 
         stage('Deploy') {
             steps {
-                sh 'docker-compose up -d'
+                // First stop any existing containers
+                sh 'docker-compose down || true'
+                
+                // Then start new containers
+                sh 'docker-compose up -d --build'
+                
+                // Health check
+                sh 'sleep 10 && curl --fail http://localhost:8000 || exit 1'
             }
         }
     }
 
     post {
+        always {
+            // Clean up stopped containers
+            sh 'docker container prune -f || true'
+        }
         success {
             echo '✅ Build and deployment successful!'
+            // Optional: Add notification here
         }
         failure {
             echo '❌ Build failed. Please check the logs!'
+            // Optional: Add failure notification here
         }
     }
 }
