@@ -1,5 +1,5 @@
 # django-todo
-A simple todo app built with django yes hey
+A simple todo app built with django
 # hi my name is Aryan
 # my name is Aryan Gupta
 ![todo App](https://raw.githubusercontent.com/shreys7/django-todo/develop/staticfiles/todoApp.png)
