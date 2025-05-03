@@ -6,7 +6,7 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Cheackout') {
             steps {
                 git url: 'https://github.com/Aryangupta6612/django-todo-cicd.git', branch: 'develop'
             }
